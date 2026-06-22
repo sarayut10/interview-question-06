@@ -1,0 +1,187 @@
+@model IEnumerable<ProductBarcodeManager.Models.Product>
+@{
+    ViewData["Title"] = "IT 06-1 Barcode Manager";
+}
+
+<div class="app-wrapper">
+    <!-- Green Header Banner -->
+    <div class="app-header">
+        IT 06-1
+    </div>
+
+    <!-- Main Content -->
+    <div class="app-content">
+        <!-- Display TempData Success/Error Messages -->
+        @if (TempData["ErrorMessage"] != null)
+        {
+            <div class="alert-banner alert-danger-custom">
+                @TempData["ErrorMessage"]
+            </div>
+        }
+        @if (TempData["SuccessMessage"] != null)
+        {
+            <div class="alert-banner alert-success-custom">
+                @TempData["SuccessMessage"]
+            </div>
+        }
+
+        <!-- Add Form Panel -->
+        <form asp-action="Create" method="post" id="createForm">
+            @Html.AntiForgeryToken()
+            <div class="input-panel">
+                <label for="productCodeInput" class="input-label">รหัสสินค้า</label>
+                <div class="input-field-wrapper">
+                    <input type="text" 
+                           id="productCodeInput" 
+                           name="productCode" 
+                           class="barcode-input" 
+                           placeholder="XXXX-XXXX-XXXX-XXXX" 
+                           autocomplete="off" 
+                           required />
+                </div>
+                <button type="submit" class="btn-add">ADD</button>
+            </div>
+        </form>
+
+        <!-- Barcode Table Container -->
+        <div class="table-container">
+            <table class="barcode-table">
+                <thead>
+                    <tr>
+                        <th class="col-id">id</th>
+                        <th class="col-code">รหัสสินค้า (16 หลัก)</th>
+                        <th class="col-barcode">บาร์โค้ดสินค้า</th>
+                        <th class="col-action">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        int index = 1;
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>@index</td>
+                                <td class="col-code">@item.ProductCode</td>
+                                <td>
+                                    <!-- Render Code 39 Barcode: wrapped in asterisks -->
+                                    <span class="barcode-render">*@item.ProductCode*</span>
+                                </td>
+                                <td>
+                                    <button type="button" 
+                                            class="btn-delete" 
+                                            onclick="confirmDelete('@item.Id', '@item.ProductCode')">
+                                        ลบ
+                                    </button>
+                                </td>
+                            </tr>
+                            index++;
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="4" style="text-align: center; padding: 20px; color: #777777;">
+                                ไม่มีข้อมูลสินค้าในขณะนี้
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Styled Deletion Confirmation Modal -->
+<div id="deleteModal" class="custom-modal-backdrop">
+    <div class="custom-modal-box">
+        <div id="deleteModalText" class="custom-modal-text">
+            ต้องการลบข้อมูล รหัสสินค้า XXXX-XXXX-XXXX-XXXX หรือไม่ ?
+        </div>
+        <div class="custom-modal-buttons">
+            <form id="deleteForm" method="post" asp-action="Delete">
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="deleteProductId" name="id" value="" />
+                <button type="submit" class="btn-modal btn-modal-confirm">ตกลง</button>
+            </form>
+            <button type="button" class="btn-modal btn-modal-cancel" onclick="closeModal()">ยกเลิก</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const input = document.getElementById('productCodeInput');
+
+            if (input) {
+                // Focus input box on load
+                input.focus();
+
+                // Masking inputs to force format: XXXX-XXXX-XXXX-XXXX (uppercase alpha-numeric only)
+                input.addEventListener('input', function (e) {
+                    let value = e.target.value.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+                    
+                    if (value.length > 16) {
+                        value = value.substring(0, 16);
+                    }
+                    
+                    let formatted = '';
+                    for (let i = 0; i < value.length; i++) {
+                        if (i > 0 && i % 4 === 0) {
+                            formatted += '-';
+                        }
+                        formatted += value[i];
+                    }
+                    
+                    e.target.value = formatted;
+                });
+
+                // Lock keys that are not alphanumeric except editing keys
+                input.addEventListener('keydown', function (e) {
+                    const allowedKeys = [
+                        'Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Enter', 'Home', 'End'
+                    ];
+                    
+                    const isAlphanumeric = /^[a-zA-Z0-9]$/.test(e.key);
+                    const isControl = allowedKeys.includes(e.key) || (e.ctrlKey && ['a', 'c', 'v', 'x'].includes(e.key.toLowerCase()));
+                    
+                    if (!isAlphanumeric && !isControl) {
+                        e.preventDefault();
+                    }
+                });
+            }
+        });
+
+        // Modal Logic
+        function confirmDelete(id, productCode) {
+            const modal = document.getElementById('deleteModal');
+            const modalText = document.getElementById('deleteModalText');
+            const deleteProductIdInput = document.getElementById('deleteProductId');
+            
+            if (modal && modalText && deleteProductIdInput) {
+                // Set text
+                modalText.innerText = `ต้องการลบข้อมูล รหัสสินค้า ${productCode} หรือไม่ ?`;
+                // Set productId value
+                deleteProductIdInput.value = id;
+                // Show modal
+                modal.classList.add('show');
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('deleteModal');
+            if (modal) {
+                modal.classList.remove('show');
+            }
+        }
+
+        // Close modal when clicking outside the box
+        window.onclick = function(event) {
+            const modal = document.getElementById('deleteModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        }
+    </script>
+}

@@ -1,0 +1,27 @@
+## .NET / ASP.NET Core
+bin/
+obj/
+*.user
+*.suo
+.vs/
+*.userprefs
+
+## Publish / Build output
+publish/
+out/
+artifacts/
+
+## Logs
+*.log
+logs/
+
+## Secrets / Config overrides
+appsettings.Development.json
+appsettings.Production.json
+*.pfx
+*.p12
+
+## OS
+Thumbs.db
+.DS_Store
+desktop.ini
